@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -37,29 +36,36 @@ public class WebSecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        return NimbusJwtDecoder.withJwkSetUri("http://localhost:8080/realms/okr/protocol/openid-connect/certs")
+        // 1. 配置 Keycloak JWKS 端点（替换为你的实际地址）
+        return NimbusJwtDecoder
+                .withJwkSetUri("http://localhost:8080/realms/okr/protocol/openid-connect/certs")
                 .build();
     }
 
+    /**
+     * 认证配置：跨域配置、Session配置、跨站请求伪造csrf配置、异常处理、过滤不用授权的ur、oauth2配置、
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager authManager) throws Exception {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
-        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        http.csrf(AbstractHttpConfigurer::disable); // TODO check if needed
-        http.exceptionHandling(exception -> exception.authenticationEntryPoint((request, response, authException) -> {
-            response.addHeader(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"Restricted Content\"");
+        http.sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        http.csrf(AbstractHttpConfigurer::disable);
+        http.exceptionHandling(exception -> exception.authenticationEntryPoint(
+                (request, response, authException) -> {
+            //response.addHeader(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"Restricted Content\"");
             response.sendError(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.getReasonPhrase());
         }));
 
         setUnauthorizedUriRoutes(http);
         http.oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
         http.authenticationManager(authManager);
-
         return http.build();
     }
 
     private void setUnauthorizedUriRoutes(HttpSecurity http) throws Exception {
-        http.authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers(
+        http.authorizeHttpRequests(authorizationManagerRequestMatcherRegistry ->
+                authorizationManagerRequestMatcherRegistry.requestMatchers(
                         "/v2/api-docs/**",
                         "/swagger-resources/configuration/ui",
                         "/swagger-resources/configuration/security",
@@ -68,7 +74,7 @@ public class WebSecurityConfig {
                         "/webjars/**",
                         "/wsregistry",
                         "/actuator/**",
-                        "/applicationSettings/oidcConfiguration" // TODO try to move to /api
+                        "/applicationSettings/oidcConfiguration"
                 )
                 .permitAll()
                 .anyRequest()

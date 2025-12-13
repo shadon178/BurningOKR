@@ -21,6 +21,9 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
 
     private final AuthenticationUserContextService authenticationUserContextService;
 
+    /**
+     * 认证入口
+     */
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         log.debug("custom authenticate called");
@@ -52,4 +55,5 @@ public class CustomAuthenticationProvider implements AuthenticationProvider {
     public boolean supports(Class<?> authentication) {
         return BearerTokenAuthenticationToken.class.isAssignableFrom(authentication);
     }
+
 }
