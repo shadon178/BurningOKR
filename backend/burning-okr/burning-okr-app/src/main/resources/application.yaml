@@ -1,3 +1,5 @@
+
+
 spring:
   jpa:
     hibernate:
@@ -33,3 +35,6 @@ system:
       - 'email'
     strict-discovery-document-validation: true
     demo-mode: false
+
+server:
+  port: 8083

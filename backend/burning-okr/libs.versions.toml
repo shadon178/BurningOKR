@@ -1,19 +1,17 @@
 [versions]
-spring-boot = '3.+'
-spring-framework-context = '6.0.10' # TODO (C.K.): check on next version if working again
-spring-framework-context-support = '6.0.10'
-spring-security = '6.+'
-hibernate = '6.+'
-swagger = '2.9.+'
+spring-boot = '3.5.8'
+spring-security = '6.3.3'
+hibernate = '6.5.2.Final'
+swagger = '2.9.2'
 lombok-plugin = '6.+'
-jakarta-mail = '2.0.+'
-jackson = '2.+'
-postgres = '42.+'
+jakarta-mail = '2.0.1'
+jackson = '2.17.2'
+postgres = '42.7.3'
 flyway = '9.19.4'
-mssql = '10.+'
-apache-poi = '5.+'
-guava = '31.+'
-springdoc = '2.+'
+mssql = '10.2.1.jre17'
+apache-poi = '5.3.0'
+guava = '31.1-jre'
+springdoc = '2.6.0'
 
 [libraries]
 # spring booot
@@ -28,10 +26,6 @@ spring-boot-starter-data = { module = 'org.springframework.boot:spring-boot-star
 spring-boot-starter-thymeleaf = { module = 'org.springframework.boot:spring-boot-starter-thymeleaf' }
 spring-boot-starter-websocket = { module = 'org.springframework.boot:spring-boot-starter-websocket' }
 spring-boot-starter-oauth2ResourceServer = { module = 'org.springframework.boot:spring-boot-starter-oauth2-resource-server' }
-
-# spring framework
-spring-framework-springContext = { module = 'org.springframework:spring-context', version.ref = 'spring-framework-context' }
-spring-framework-springContextSupport = { module = 'org.springframework:spring-context-support', version.ref = 'spring-framework-context-support' }
 
 # spring security
 spring-security-core = { module = 'org.springframework.security:spring-security-core', version.ref = 'spring-security' }

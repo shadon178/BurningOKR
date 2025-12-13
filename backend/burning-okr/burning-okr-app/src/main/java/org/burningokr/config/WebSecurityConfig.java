@@ -2,8 +2,10 @@ package org.burningokr.config;
 
 import lombok.RequiredArgsConstructor;
 import org.burningokr.service.security.authenticationUserContext.CustomAuthenticationProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -14,6 +16,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -26,59 +30,69 @@ import java.util.List;
 @Configuration
 @RequiredArgsConstructor
 public class WebSecurityConfig {
-  private final CustomAuthenticationProvider customAuthenticationProvider;
 
-  @Bean
-  public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager authManager) throws Exception {
-    http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
-    http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-    http.csrf(AbstractHttpConfigurer::disable); // TODO check if needed
-    http.exceptionHandling(exception -> exception.authenticationEntryPoint((request, response, authException) -> {
-      response.addHeader(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"Restricted Content\"");
-      response.sendError(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.getReasonPhrase());
-    }));
+    @Autowired
+    @Lazy
+    private CustomAuthenticationProvider customAuthenticationProvider;
 
-    setUnauthorizedUriRoutes(http);
-    http.oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
-    http.authenticationManager(authManager);
+    @Bean
+    public JwtDecoder jwtDecoder() {
+        return NimbusJwtDecoder.withJwkSetUri("http://localhost:8080/realms/okr/protocol/openid-connect/certs")
+                .build();
+    }
 
-    return http.build();
-  }
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager authManager) throws Exception {
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource()));
+        http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        http.csrf(AbstractHttpConfigurer::disable); // TODO check if needed
+        http.exceptionHandling(exception -> exception.authenticationEntryPoint((request, response, authException) -> {
+            response.addHeader(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"Restricted Content\"");
+            response.sendError(HttpStatus.UNAUTHORIZED.value(), HttpStatus.UNAUTHORIZED.getReasonPhrase());
+        }));
 
-  private void setUnauthorizedUriRoutes(HttpSecurity http) throws Exception {
-    http.authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers(
-            "/v2/api-docs/**",
-            "/swagger-resources/configuration/ui",
-            "/swagger-resources/configuration/security",
-            "/swagger-resources",
-            "/swagger-ui.html**",
-            "/webjars/**",
-            "/wsregistry",
-            "/actuator/**",
-            "/applicationSettings/oidcConfiguration" // TODO try to move to /api
-        )
-        .permitAll()
-        .anyRequest()
-        .authenticated());
-  }
+        setUnauthorizedUriRoutes(http);
+        http.oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt);
+        http.authenticationManager(authManager);
 
-  private CorsConfigurationSource corsConfigurationSource() {
-    final var configuration = new CorsConfiguration();
-    configuration.setAllowedOrigins(List.of("*"));
-    configuration.setAllowedMethods(List.of("*"));
-    configuration.setAllowedHeaders(List.of("*"));
-    configuration.setExposedHeaders(List.of("*"));
+        return http.build();
+    }
 
-    // Limited to API routes (neither actuator nor Swagger-UI)
-    final var source = new UrlBasedCorsConfigurationSource();
-    source.registerCorsConfiguration("/api/**", configuration);
+    private void setUnauthorizedUriRoutes(HttpSecurity http) throws Exception {
+        http.authorizeHttpRequests(authorizationManagerRequestMatcherRegistry -> authorizationManagerRequestMatcherRegistry.requestMatchers(
+                        "/v2/api-docs/**",
+                        "/swagger-resources/configuration/ui",
+                        "/swagger-resources/configuration/security",
+                        "/swagger-resources",
+                        "/swagger-ui.html**",
+                        "/webjars/**",
+                        "/wsregistry",
+                        "/actuator/**",
+                        "/applicationSettings/oidcConfiguration" // TODO try to move to /api
+                )
+                .permitAll()
+                .anyRequest()
+                .authenticated());
+    }
 
-    return source;
-  }
+    private CorsConfigurationSource corsConfigurationSource() {
+        final var configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("*"));
+        configuration.setAllowedMethods(List.of("*"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("*"));
 
-  @Bean
-  public AuthenticationManager authManager(HttpSecurity http) throws Exception {
-    var authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
-    return authBuilder.authenticationProvider(customAuthenticationProvider).build();
-  }
+        // Limited to API routes (neither actuator nor Swagger-UI)
+        final var source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", configuration);
+
+        return source;
+    }
+
+    @Bean
+    public AuthenticationManager authManager(HttpSecurity http) throws Exception {
+        var authBuilder = http.getSharedObject(AuthenticationManagerBuilder.class);
+        return authBuilder.authenticationProvider(customAuthenticationProvider).build();
+    }
+
 }

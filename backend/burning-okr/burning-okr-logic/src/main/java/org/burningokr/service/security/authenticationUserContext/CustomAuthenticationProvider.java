@@ -17,38 +17,39 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CustomAuthenticationProvider implements AuthenticationProvider {
 
-  private final JwtDecoder jwtDecoder;
-  private final AuthenticationUserContextService authenticationUserContextService;
+    private final JwtDecoder jwtDecoder;
 
-  @Override
-  public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-    log.debug("custom authenticate called");
+    private final AuthenticationUserContextService authenticationUserContextService;
 
-    var jwtAuthenticationProvider = new JwtAuthenticationProvider(jwtDecoder);
-    var applicationAuthentication = jwtAuthenticationProvider.authenticate(authentication);
-    User userFromToken = authenticationUserContextService.getUserFromToken((Jwt) applicationAuthentication.getCredentials());
+    @Override
+    public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+        log.debug("custom authenticate called");
 
-    BurningOkrAuthentication burningOkrAuthentication = createCustomAuthentication(
-        (Jwt) applicationAuthentication.getCredentials(), userFromToken, applicationAuthentication
-    );
+        var jwtAuthenticationProvider = new JwtAuthenticationProvider(jwtDecoder);
+        var applicationAuthentication = jwtAuthenticationProvider.authenticate(authentication);
+        User userFromToken = authenticationUserContextService.getUserFromToken((Jwt) applicationAuthentication.getCredentials());
 
-    if (applicationAuthentication.isAuthenticated()) {
-      log.debug("updating user from jwt because token is valid, calling update user on AuthenticationUserContextService");
-      authenticationUserContextService.updateCachedAndDatabaseUser(userFromToken);
+        BurningOkrAuthentication burningOkrAuthentication = createCustomAuthentication(
+                (Jwt) applicationAuthentication.getCredentials(), userFromToken, applicationAuthentication
+        );
+
+        if (applicationAuthentication.isAuthenticated()) {
+            log.debug("updating user from jwt because token is valid, calling update user on AuthenticationUserContextService");
+            authenticationUserContextService.updateCachedAndDatabaseUser(userFromToken);
+        }
+
+        return burningOkrAuthentication;
     }
 
-    return burningOkrAuthentication;
-  }
+    private BurningOkrAuthentication createCustomAuthentication(Jwt jwt, User userFromToken, Authentication authentication) {
+        BurningOkrAuthentication burningOkrAuthentication = new BurningOkrAuthentication(jwt, userFromToken);
+        burningOkrAuthentication.setAuthenticated(authentication.isAuthenticated());
 
-  private BurningOkrAuthentication createCustomAuthentication(Jwt jwt, User userFromToken, Authentication authentication) {
-    BurningOkrAuthentication burningOkrAuthentication = new BurningOkrAuthentication(jwt, userFromToken);
-    burningOkrAuthentication.setAuthenticated(authentication.isAuthenticated());
+        return burningOkrAuthentication;
+    }
 
-    return burningOkrAuthentication;
-  }
-
-  @Override
-  public boolean supports(Class<?> authentication) {
-    return BearerTokenAuthenticationToken.class.isAssignableFrom(authentication);
-  }
+    @Override
+    public boolean supports(Class<?> authentication) {
+        return BearerTokenAuthenticationToken.class.isAssignableFrom(authentication);
+    }
 }
